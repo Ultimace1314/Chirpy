@@ -10,7 +10,7 @@ func handlerValidateChirp(w http.ResponseWriter, r *http.Request) {
 	type chirp struct {
 		Body string `json:"body"`
 	}
-	type response struct {
+	type returnVals struct {
 		CleanedBody string `json:"cleaned_body"`
 	}
 
@@ -31,24 +31,26 @@ func handlerValidateChirp(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	retResp := handlerBadWordCleaner(params.Body)
+	badWords := map[string]struct{}{
+		"kerfuffle": {},
+		"sharbert":  {},
+		"fornax":    {},
+	}
+	cleaned := getCleanedBody(params.Body, badWords)
 
-	respondWithJSON(w, 200, response{CleanedBody: retResp})
+	respondWithJSON(w, http.StatusOK, returnVals{
+		CleanedBody: cleaned,
+	})
 }
 
-func handlerBadWordCleaner(s string) string {
-	badwords := []string{"kerfuffle", "sharbert", "fornax"}
-	words := strings.Split(s, " ")
-	// for each word in the string
+func getCleanedBody(body string, badWords map[string]struct{}) string {
+	words := strings.Split(body, " ")
 	for i, word := range words {
-		// for each bad word
-		for _, badword := range badwords {
-			// if the word is a bad word
-			if strings.ToLower(word) == badword {
-				// replace the word with ****
-				words[i] = "****"
-			}
+		loweredWord := strings.ToLower(word)
+		if _, ok := badWords[loweredWord]; ok {
+			words[i] = "****"
 		}
 	}
-	return strings.Join(words, " ")
+	cleaned := strings.Join(words, " ")
+	return cleaned
 }
