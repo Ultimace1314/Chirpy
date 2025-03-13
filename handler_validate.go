@@ -18,16 +18,16 @@ func handlerValidateChirp(w http.ResponseWriter, r *http.Request) {
 	params := chirp{}
 	err := decoder.Decode(&params)
 	if err != nil {
-		respondWithError(w, 500, "Something went wrong")
+		respondWithError(w, 500, "Something went wrong", err)
 		return
 	}
 
 	if len(params.Body) > 140 {
-		respondWithError(w, 400, "Chirp is too long")
+		respondWithError(w, 400, "Chirp is too long", err)
 		return
 	}
 	if len(params.Body) == 0 {
-		respondWithError(w, 400, "Chirp is empty")
+		respondWithError(w, 400, "Chirp is empty", err)
 		return
 	}
 
