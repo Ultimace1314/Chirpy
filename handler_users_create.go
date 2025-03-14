@@ -15,12 +15,13 @@ type User struct {
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 	Email     string    `json:"email"`
+	Password  string    `json:"-"`
 }
 
 func (cfg *apiConfig) handlerUsersCreate(w http.ResponseWriter, r *http.Request) {
 	type parameters struct {
-		Email    string `json:"email"`
 		Password string `json:"password"`
+		Email    string `json:"email"`
 	}
 	type response struct {
 		User
@@ -39,16 +40,17 @@ func (cfg *apiConfig) handlerUsersCreate(w http.ResponseWriter, r *http.Request)
 		respondWithError(w, http.StatusInternalServerError, "Couldn't hash password", err)
 		return
 	}
+
 	user, err := cfg.db.CreateUser(r.Context(), database.CreateUserParams{
-		Email:    params.Email,
-		Password: hashedPassword,
+		Email:          params.Email,
+		HashedPassword: hashedPassword,
 	})
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Couldn't create user", err)
 		return
 	}
 
-	respondWithJSON(w, 201, response{
+	respondWithJSON(w, http.StatusCreated, response{
 		User: User{
 			ID:        user.ID,
 			CreatedAt: user.CreatedAt,
@@ -56,39 +58,4 @@ func (cfg *apiConfig) handlerUsersCreate(w http.ResponseWriter, r *http.Request)
 			Email:     user.Email,
 		},
 	})
-}
-
-func (cfg *apiConfig) handlerUsersLogin(w http.ResponseWriter, r *http.Request) {
-	type parameters struct {
-		Email    string `json:"email"`
-		Password string `json:"password"`
-	}
-
-	decoder := json.NewDecoder(r.Body)
-	params := parameters{}
-	err := decoder.Decode(&params)
-	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, "Couldn't decode parameters", err)
-		return
-	}
-
-	user, err := cfg.db.GetUserByEmail(r.Context(), params.Email)
-	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, "Couldn't get user", err)
-		return
-	}
-
-	err = auth.CheckPasswordHash(params.Password, user.Password)
-	if err != nil {
-		respondWithError(w, http.StatusUnauthorized, "Invalid password", err)
-		return
-	}
-
-	respondWithJSON(w, 200, User{
-		ID:        user.ID,
-		CreatedAt: user.CreatedAt,
-		UpdatedAt: user.UpdatedAt,
-		Email:     user.Email,
-	},
-	)
 }
